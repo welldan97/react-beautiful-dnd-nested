@@ -12,30 +12,37 @@ import type {
 type Args = {|
   target: Position,
   droppables: DroppableDimensionMap,
+  draggable: any,
 |};
 
-export default ({ target, droppables }: Args): ?DroppableId => {
-  const maybe: ?DroppableDimension = find(
-    toDroppableList(droppables),
-    (droppable: DroppableDimension): boolean => {
-      // only want enabled droppables
-      if (!droppable.isEnabled) {
-        return false;
-      }
+export default ({ target, droppables, draggable }: Args): ?DroppableId => {
+  const maybe = toDroppableList(droppables)
+    .filter(
+      (droppable: DroppableDimension): boolean => {
+        // only want enabled droppables
+        if (!droppable.isEnabled) {
+          return false;
+        }
 
-      const active: ?Rect = droppable.subject.active;
+        const active: ?Rect = droppable.subject.active;
 
-      if (!active) {
-        return false;
-      }
+        if (!active) {
+          return false;
+        }
 
-      // Not checking to see if visible in viewport
-      // as the target might be off screen if dragging a large draggable
-      // Not adjusting target for droppable scroll as we are just checking
-      // if it is over the droppable - not its internal impact
-      return isPositionInFrame(active)(target);
-    },
-  );
-
-  return maybe ? maybe.descriptor.id : null;
+        if (draggable.descriptor.id === droppable.descriptor.id) return false;
+        // Not checking to see if visible in viewport
+        // as the target might be off screen if dragging a large draggable
+        // Not adjusting target for droppable scroll as we are just checking
+        // if it is over the droppable - not its internal impact
+        return isPositionInFrame(active)(target);
+      },
+    )
+    .sort(
+      (a, b) =>
+        a.subject.active.width * a.subject.active.height -
+        b.subject.active.width * b.subject.active.height,
+    );
+  if (!maybe.length) return null;
+  return maybe[0].descriptor.id;
 };
